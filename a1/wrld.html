@@ -353,12 +353,6 @@ const worldPlaces = [
             image.alt = place.name;
             image.className = "place-photo";
 
-            image.onerror = function () {
-                const message = document.createElement("p");
-                message.textContent = "Add your photo here.";
-                image.replaceWith(message);
-            };
-
             container.append(title, description, image);
 
             return container;
