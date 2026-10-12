@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Abroad Trips | Tan Kösedağ</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --home: #dfc49c;
+            --about: #86b5df;
+            --domestic: #96bb97;
+            --abroad: #b49bd2;
+            --ink: #243044;
+        }
+
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+
+        body {
+            margin: 0;
+            background: #eee8f6;
+            color: var(--ink);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.7;
+        }
+
+        body.modal-open { overflow: hidden; }
+
+        .site {
+            max-width: 1320px;
+            min-height: 100vh;
+            margin: auto;
+            background: #f7f3fb;
+            box-shadow: 0 0 60px #38383812;
+        }
+
+        .folder-navigation {
+            background: #383838;
+            padding: 28px 24px 0;
+        }
+
+        .folder-navigation ul {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .folder-navigation li { flex: 1; min-width: 0; }
+
+        .folder-tab {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            padding: 12px 22px;
+            color: #26303d;
+            text-align: center;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            background: var(--tab-color);
+            clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
+            transition: min-height .2s ease, color .2s ease, filter .2s ease;
+        }
+
+        .tab-home { --tab-color: var(--home); }
+        .tab-about { --tab-color: var(--about); }
+        .tab-domestic { --tab-color: var(--domestic); }
+        .tab-abroad { --tab-color: var(--abroad); }
+
+        .folder-tab:hover {
+            min-height: 68px;
+            color: #101722;
+            filter: brightness(1.06);
+        }
+
+        .folder-tab[aria-current="page"] {
+            min-height: 80px;
+            font-weight: 700;
+        }
+
+        a:focus-visible, button:focus-visible {
+            outline: 3px solid #162b4d;
+            outline-offset: 4px;
+        }
+
+        .folder-tab:focus-visible { outline-offset: -7px; }
+
+        main { padding: 42px clamp(22px, 4vw, 48px) 60px; }
+
+        .travel-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+            gap: 26px;
+            align-items: start;
+        }
+
+        .map-card {
+            min-width: 0;
+            background: white;
+            border: 1px solid #dfd4ec;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 28px #543b7010;
+        }
+
+        #world-map {
+            width: 100%;
+            height: 570px;
+            background: #e4e1eb;
+        }
+
+        .map-caption {
+            margin: 0;
+            padding: 12px 16px;
+            border-top: 1px solid #e9e1f1;
+            color: #685779;
+            font-size: 12px;
+        }
+
+        .detail-heading {
+            margin: 0 0 18px;
+            font-size: 27px;
+            font-weight: 500;
+            color: #594272;
+        }
+
+        .description-card {
+            padding: 20px;
+            background: #ffffffb8;
+            border: 1px solid #dfd4ec;
+            border-radius: 12px;
+        }
+
+        .description-card p { margin: 0 0 18px; }
+        .description-card p:last-child { margin-bottom: 0; }
+        .description-card strong { color: #594272; }
+
+        .ribbon {
+            display: inline-block;
+            margin: 24px 0 16px;
+            padding: 8px 32px 8px 16px;
+            background: #dfd0ef;
+            color: #594272;
+            clip-path: polygon(
+                0 0, calc(100% - 18px) 0,
+                100% 50%, calc(100% - 18px) 100%, 0 100%
+            );
+            font-size: 19px;
+            font-weight: 500;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .gallery-button {
+            padding: 0;
+            border: 2px solid white;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #e5dcef;
+            cursor: pointer;
+            box-shadow: 0 3px 10px #59427215;
+            transition: transform .2s ease;
+        }
+
+        .gallery-button:hover { transform: translateY(-3px); }
+
+        .gallery-button img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+        }
+
+        .travel-icon { background: transparent; border: 0; }
+
+        .country-cluster {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #594272;
+            color: white;
+            border: 3px solid white;
+            border-radius: 50%;
+            font: bold 16px Arial;
+            box-shadow: 0 4px 12px #0003;
+        }
+
+        .place-label {
+            background: #ffffffed;
+            border: 1px solid #d8cce5;
+            border-radius: 6px;
+            color: #40304f;
+            font: bold 12px Arial;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        .photo-dialog {
+            width: min(1000px, 94vw);
+            max-height: 92svh;
+            padding: 50px 18px 18px;
+            border: 0;
+            border-radius: 14px;
+            background: #faf8fd;
+            color: #243044;
+        }
+
+        .photo-dialog::backdrop { background: #14101de0; }
+
+        .photo-dialog img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 70svh;
+            object-fit: contain;
+        }
+
+        .dialog-close {
+            position: absolute;
+            right: 14px;
+            top: 8px;
+            border: 0;
+            background: transparent;
+            font-size: 28px;
+            color: #594272;
+            cursor: pointer;
+        }
+
+        .dialog-caption {
+            margin: 12px 0 0;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .contact {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 260px;
+            align-items: center;
+            gap: 32px;
+            padding: 34px clamp(22px, 4vw, 56px);
+            background: #efefef;
+            border-top: 1px solid #dedede;
+        }
+
+        .contact-links { display: grid; gap: 18px; }
+
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: fit-content;
+            color: #344052;
+            text-decoration: none;
+        }
+
+        .contact-link:hover { text-decoration: underline; }
+
+        .contact-link img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+        }
+
+        .contact h2 {
+            margin: 0 0 14px;
+            font-size: 19px;
+            font-weight: 500;
+        }
+
+        .contact-card {
+            padding: 18px;
+            background: #ececec;
+            border: 1px solid #d6d6d6;
+            border-radius: 12px;
+        }
+
+        .contact-card img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .travel-layout { grid-template-columns: 1fr; }
+            #world-map { height: 490px; }
+            .gallery {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 680px) {
+            .folder-navigation { padding: 20px 8px 0; }
+            .folder-navigation ul { gap: 3px; }
+            .folder-tab {
+                min-height: 64px;
+                padding: 10px 8px;
+                font-size: 11px;
+                clip-path: polygon(
+                    7px 0, calc(100% - 7px) 0, 100% 100%, 0 100%
+                );
+            }
+            .folder-tab:hover { min-height: 70px; }
+            .folder-tab[aria-current="page"] { min-height: 80px; }
+            #world-map { height: 420px; }
+            .gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .contact { grid-template-columns: 1fr; }
+            .contact-card { max-width: 260px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; }
+        }
+
+        .folder-navigation {
+    --tab-slope: clamp(20px, 5vw, 64px);
+    padding: 0;
+    background: #383838;
+}
+
+.folder-navigation ul {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    height: 110px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    isolation: isolate;
+}
+
+.folder-navigation li {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    z-index: 1;
+}
+
+/* Hovered tab comes forward. */
+.folder-navigation li:hover,
+.folder-navigation li:focus-within {
+    z-index: 5;
+}
+
+/* Active tab stays in front. */
+.folder-navigation li:has([aria-current="page"]) {
+    z-index: 10;
+}
+
+.folder-navigation .folder-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: calc(100% + var(--tab-slope) * 2);
+    height: 70px;
+    min-height: 0;
+    margin-left: calc(-1 * var(--tab-slope));
+    padding: 12px calc(var(--tab-slope) + 8px);
+
+    background: var(--tab-color);
+    color: #26303d;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: center;
+    text-decoration: none;
+
+    clip-path: polygon(
+        var(--tab-slope) 0,
+        calc(100% - var(--tab-slope)) 0,
+        100% 100%,
+        0 100%
+    );
+
+    transition: height 200ms ease;
+}
+
+/* Keep the first and last tabs inside the page. */
+.folder-navigation li:first-child .folder-tab {
+    width: calc(100% + var(--tab-slope));
+    margin-left: 0;
+    padding-left: calc(var(--tab-slope) + 8px);
+    padding-right: 8px;
+}
+
+.folder-navigation li:last-child .folder-tab {
+    width: calc(100% + var(--tab-slope));
+    padding-left: 8px;
+    padding-right: calc(var(--tab-slope) + 8px);
+}
+
+/* Middle height when hovered or focused. */
+.folder-navigation .folder-tab:hover,
+.folder-navigation .folder-tab:focus-visible {
+    height: 85px;
+    min-height: 0;
+    filter: none;
+}
+
+/* Highest position for the current page. */
+.folder-navigation .folder-tab[aria-current="page"] {
+    height: 100px;
+    min-height: 0;
+    font-weight: 500;
+}
+
+@media (max-width: 680px) {
+    .folder-navigation ul {
+        height: 95px;
+    }
+
+    .folder-navigation .folder-tab {
+        height: 58px;
+        font-size: 11px;
+    }
+
+    .folder-navigation .folder-tab:hover,
+    .folder-navigation .folder-tab:focus-visible {
+        height: 72px;
+    }
+
+    .folder-navigation .folder-tab[aria-current="page"] {
+        height: 86px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .folder-navigation .folder-tab {
+        transition: none;
+    }
+}
+
+.folder-navigation .folder-tab,
+.folder-navigation li:first-child .folder-tab,
+.folder-navigation li:last-child .folder-tab {
+    padding: 12px var(--tab-slope);
+    justify-content: center;
+    text-align: center;
+    font-size: 17px;
+}
+
+.folder-navigation .folder-tab[aria-current="page"] {
+    font-weight: 700;
+}
+
+@media (max-width: 680px) {
+    .folder-navigation .folder-tab {
+        font-size: 13px;
+    }
+}
+
+#detail-heading {
+    display: inline-block;
+    margin: 0 0 20px;
+    padding: 9px 34px 9px 16px;
+    background: #dfd0ef;
+    color: #594272;
+    font-size: 21px;
+    font-weight: 500;
+
+    clip-path: polygon(
+        0 0,
+        calc(100% - 18px) 0,
+        100% 50%,
+        calc(100% - 18px) 100%,
+        0 100%
+    );
+}
+
+    </style>
+</head>
+
+<body>
+    <div class="site">
+        <nav class="folder-navigation" aria-label="Main navigation">
+            <ul>
+                <li>
+                    <a class="folder-tab tab-home" href="home.html">Home</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-about" href="me.html">About Me</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-domestic"
+                       href="tur.html">My Domestic Trips</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-abroad"
+                       href="wrld.html" aria-current="page">My Abroad Trips</a>
+                </li>
+            </ul>
+        </nav>
+
+        <main>
+            <div class="travel-layout">
+                <section class="map-card" aria-label="World travel map">
+                    <div id="world-map"
+                         role="region"
+                         aria-label="Map of my international trips"></div>
+
+                    <p class="map-caption">
+                        Select a city to explore its story.
+                        Select an unmarked area to return to the overview.
+                    </p>
+                </section>
+
+                <section aria-labelledby="detail-heading">
+                    <div aria-live="polite">
+                        <h1 class="detail-heading" id="detail-heading">
+                            My Abroad Trips
+                        </h1>
+                        <div class="description-card" id="place-description">
+                        </div>
+                    </div>
+
+                    <section id="gallery-section"
+                             aria-labelledby="gallery-heading" hidden>
+                        <h2 class="ribbon" id="gallery-heading">Gallery</h2>
+                        <div class="gallery" id="gallery"></div>
+                    </section>
+                </section>
+            </div>
+        </main>
+
+        <footer class="contact">
+            <div class="contact-links">
+                <a class="contact-link" href="mailto:tankosedag5@gmail.com">
+                    <img src="gm.png" alt="">
+                    <span>Email</span>
+                </a>
+                <a class="contact-link" href="https://tr.linkedin.com/in/tan-kösedağ-91223239b"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <img src="lin.png" alt="">
+                    <span>LinkedIn · Tan Kösedağ</span>
+                </a>
+            </div>
+
+            <div class="contact-card">
+                <h2>Contact Me</h2>
+                <img src="hi.jpg" alt="Hi, my name is Tan" loading="lazy">
+            </div>
+        </footer>
+    </div>
+
+    <dialog class="photo-dialog"
+            id="photo-dialog"
+            aria-label="Enlarged travel photograph">
+        <button class="dialog-close"
+                id="dialog-close"
+                type="button"
+                aria-label="Close photograph">×</button>
+        <img id="dialog-image" alt="">
+        <p class="dialog-caption" id="dialog-caption"></p>
+    </dialog>
+
+    <script>
+        const worldPlaces = [
+            {
+                name: "Tokyo",
+                country: "Japan",
+                latitude: 35.6762,
+                longitude: 139.6503,
+                paragraphs: [
+                    "In September 2025, I travelled to Japan for a week. " +
+                    "During this trip, I visited Tokyo."
+                ],
+                photos: ["t1.jpg", "t2.jpg", "t3.jpg", "t4.jpg", "t5.jpg", "t6.jpg",
+                         "t7.jpg", "t8.jpg", "t9.jpg", "t10.jpg","t11.jpg", "t12.jpg", "t13.jpg", "t14.jpg", "t15.jpg"]
+            },
+            {
+                name: "Warsaw",
+                country: "Poland",
+                latitude: 52.2297,
+                longitude: 21.0122,
+                paragraphs: [
+                    "In January 2026, I travelled to Poland with my " +
+                    "friends for ten days during the semester break. " +
+                    "Warsaw was one of the cities we visited."
+                ],
+                photos: ["w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg",
+                         "w7.jpg", "w8.jpg"]
+            },
+            {
+                name: "Krakow",
+                country: "Poland",
+                latitude: 50.0647,
+                longitude: 19.9450,
+                paragraphs: [
+                    "During my ten-day trip to Poland with my friends " +
+                    "in January 2026, we also visited Krakow."
+                ],
+                photos: ["k1.jpg", "k2.jpg", "k3.jpg", "k4.jpg", "k5.jpg", "k6.jpg",
+                         "k7.jpg", "k8.jpg", "k9.jpg", "k10.jpg", "k11.jpg", "k12.jpg", "k13.jpg"]
+            },
+            {
+                name: "Milan",
+                country: "Italy",
+                latitude: 45.4642,
+                longitude: 9.1900,
+                paragraphs: [
+                    "In the summer of 2018, I travelled to Italy " +
+                    "with my family for two weeks. Milan was one " +
+                    "of the cities we visited."
+                ],
+                photos: []
+            },
+            {
+                name: "Rome",
+                country: "Italy",
+                latitude: 41.9028,
+                longitude: 12.4964,
+                paragraphs: [
+                    "I visited Rome with my family during " +
+                    "our two-week trip to Italy in the summer of 2018."
+                ],
+                photos: []
+            },
+            {
+                name: "Pisa",
+                country: "Italy",
+                latitude: 43.7228,
+                longitude: 10.4017,
+                paragraphs: [
+                    "Pisa was another stop on our family trip " +
+                    "to Italy in the summer of 2018."
+                ],
+                photos: []
+            }
+        ];
+
+        const heading = document.getElementById("detail-heading");
+        const description = document.getElementById("place-description");
+        const gallerySection = document.getElementById("gallery-section");
+        const gallery = document.getElementById("gallery");
+
+        const photoDialog = document.getElementById("photo-dialog");
+        const dialogImage = document.getElementById("dialog-image");
+        const dialogCaption = document.getElementById("dialog-caption");
+
+        function showOverview() {
+            heading.textContent = "My Abroad Trips";
+            description.replaceChildren();
+
+            const intro = document.createElement("p");
+            intro.textContent = "Places I have visited around the world.";
+            description.append(intro);
+
+            const overview = [
+                {
+                    date: "2026 January",
+                    text:
+                        "I travelled to Poland with my friends for ten " +
+                        "days during the semester break. We visited " +
+                        "Krakow and Warsaw."
+                },
+                {
+                    date: "2025 September",
+                    text:
+                        "I travelled to Japan for a week and visited Tokyo."
+                },
+                {
+                    date: "2018 Summer",
+                    text:
+                        "I travelled to Italy with my family for two weeks. " +
+                        "We visited several cities, including Milan, " +
+                        "Rome and Pisa."
+                }
+            ];
+
+            overview.forEach(function (item) {
+                const paragraph = document.createElement("p");
+                const date = document.createElement("strong");
+                date.textContent = item.date;
+                paragraph.append(date, document.createElement("br"));
+                paragraph.append(document.createTextNode(item.text));
+                description.append(paragraph);
+            });
+
+            gallery.replaceChildren();
+            gallerySection.hidden = true;
+        }
+
+        function showPlace(place) {
+            heading.textContent = place.name;
+            description.replaceChildren();
+
+            place.paragraphs.forEach(function (text) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = text;
+                description.append(paragraph);
+            });
+
+            gallery.replaceChildren();
+            gallerySection.hidden = place.photos.length === 0;
+
+            place.photos.forEach(function (source, index) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "gallery-button";
+                button.setAttribute(
+                    "aria-label",
+                    "Enlarge " + place.name + " photograph " + (index + 1)
+                );
+
+                const image = document.createElement("img");
+                image.src = source;
+                image.alt = place.name + " photograph " + (index + 1);
+                image.loading = "lazy";
+
+                image.addEventListener("error", function () {
+                    button.remove();
+
+                    if (gallery.children.length === 0) {
+                        gallerySection.hidden = true;
+                    }
+                }, { once: true });
+
+                button.append(image);
+
+                button.addEventListener("click", function () {
+                    dialogImage.src = source;
+                    dialogImage.alt = image.alt;
+                    dialogCaption.textContent =
+                        place.name + " · Photograph " + (index + 1);
+
+                    photoDialog.showModal();
+                    document.body.classList.add("modal-open");
+                });
+
+                gallery.append(button);
+            });
+        }
+
+        document.getElementById("dialog-close")
+            .addEventListener("click", function () {
+                photoDialog.close();
+            });
+
+        photoDialog.addEventListener("click", function (event) {
+            if (event.target !== photoDialog) return;
+
+            const rect = photoDialog.getBoundingClientRect();
+
+            const outside =
+                event.clientX < rect.left ||
+                event.clientX > rect.right ||
+                event.clientY < rect.top ||
+                event.clientY > rect.bottom;
+
+            if (outside) photoDialog.close();
+        });
+
+        photoDialog.addEventListener("close", function () {
+            document.body.classList.remove("modal-open");
+            dialogImage.removeAttribute("src");
+        });
+
+        const worldBounds = L.latLngBounds(
+            [-85.0511, -180],
+            [85.0511, 180]
+        );
+
+        const worldMap = L.map("world-map", {
+            center: [28, 45],
+            zoom: 2,
+            minZoom: 1,
+            maxZoom: 18,
+            maxBounds: worldBounds,
+            maxBoundsViscosity: 1,
+            worldCopyJump: false
+        });
+
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">' +
+                'OpenStreetMap</a> contributors',
+            noWrap: true,
+            bounds: worldBounds,
+            maxZoom: 19
+        }).addTo(worldMap);
+
+        const pinSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="32" height="42" viewBox="0 0 32 42">
+                <path
+                    d="M16 1C7.7 1 1 7.7 1 16c0 11 15 25 15 25s15-14 15-25C31 7.7 24.3 1 16 1z"
+                    fill="#594272" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="5" fill="white"/>
+            </svg>
+        `;
+
+        const travelIcon = L.divIcon({
+            className: "travel-icon",
+            html: pinSvg,
+            iconSize: [32, 42],
+            iconAnchor: [16, 42]
+        });
+
+        const cityZoomThreshold = 6;
+        const cityLayer = L.layerGroup();
+        const clusterLayer = L.layerGroup();
+        const individualLayer = L.layerGroup();
+
+        worldPlaces.forEach(function (place) {
+            const marker = L.marker(
+                [place.latitude, place.longitude],
+                {
+                    icon: travelIcon,
+                    title: place.name,
+                    alt: place.name,
+                    bubblingMouseEvents: false
+                }
+            );
+
+            marker.bindTooltip(place.name, {
+                permanent: true,
+                direction: "right",
+                offset: [12, -22],
+                className: "place-label"
+            });
+
+            marker.on("click", function () {
+                showPlace(place);
+            });
+
+            if (place.country === "Italy" || place.country === "Poland") {
+                marker.addTo(cityLayer);
+            } else {
+                marker.addTo(individualLayer);
+            }
+        });
+
+        ["Italy", "Poland"].forEach(function (country) {
+            const places = worldPlaces.filter(function (place) {
+                return place.country === country;
+            });
+
+            const latitude =
+                places.reduce(function (sum, place) {
+                    return sum + place.latitude;
+                }, 0) / places.length;
+
+            const longitude =
+                places.reduce(function (sum, place) {
+                    return sum + place.longitude;
+                }, 0) / places.length;
+
+            const clusterIcon = L.divIcon({
+                className: "travel-icon",
+                html:
+                    '<div class="country-cluster">' +
+                    places.length +
+                    '</div>',
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
+            });
+
+            const clusterMarker = L.marker(
+                [latitude, longitude],
+                {
+                    icon: clusterIcon,
+                    title: country + " — " + places.length + " places",
+                    alt: country + " city group",
+                    bubblingMouseEvents: false
+                }
+            );
+
+            clusterMarker.bindTooltip(country, {
+                permanent: true,
+                direction: "bottom",
+                offset: [0, 22],
+                className: "place-label"
+            });
+
+            clusterMarker.on("click", function () {
+                worldMap.setView(
+                    [latitude, longitude],
+                    cityZoomThreshold
+                );
+            });
+
+            clusterMarker.addTo(clusterLayer);
+        });
+
+        individualLayer.addTo(worldMap);
+
+        function updatePlaceLayers() {
+            if (worldMap.getZoom() >= cityZoomThreshold) {
+                worldMap.removeLayer(clusterLayer);
+
+                if (!worldMap.hasLayer(cityLayer)) {
+                    cityLayer.addTo(worldMap);
+                }
+            } else {
+                worldMap.removeLayer(cityLayer);
+
+                if (!worldMap.hasLayer(clusterLayer)) {
+                    clusterLayer.addTo(worldMap);
+                }
+            }
+        }
+
+        worldMap.on("zoomend", updatePlaceLayers);
+        worldMap.on("click", showOverview);
+
+        const mapResizeObserver = new ResizeObserver(function () {
+            worldMap.invalidateSize({ pan: false });
+        });
+
+        mapResizeObserver.observe(document.getElementById("world-map"));
+
+        updatePlaceLayers();
+        showOverview();
+    </script>
+</body>
+</html>
