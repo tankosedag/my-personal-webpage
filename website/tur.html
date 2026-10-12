@@ -1,0 +1,898 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Domestic Trips | Tan Kösedağ</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/ol@10.11.0/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@10.11.0/dist/ol.js"></script>
+
+    <style>
+        :root {
+            --home: #dfc49c;
+            --about: #86b5df;
+            --domestic: #96bb97;
+            --abroad: #b49bd2;
+            --ink: #243044;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: #eaf2e7;
+            color: var(--ink);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.7;
+        }
+
+        .site {
+            max-width: 1320px;
+            min-height: 100vh;
+            margin: auto;
+            background: #f3f7ef;
+            box-shadow: 0 0 60px #38383812;
+        }
+
+        .folder-navigation {
+            background: #383838;
+            padding: 28px 24px 0;
+        }
+
+        .folder-navigation ul {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .folder-navigation li { flex: 1; min-width: 0; }
+
+        .folder-tab {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            padding: 12px 22px;
+            color: #26303d;
+            text-align: center;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            background: var(--tab-color);
+            clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
+            transition: min-height .2s ease, color .2s ease, filter .2s ease;
+        }
+
+        .tab-home { --tab-color: var(--home); }
+        .tab-about { --tab-color: var(--about); }
+        .tab-domestic { --tab-color: var(--domestic); }
+        .tab-abroad { --tab-color: var(--abroad); }
+
+        .folder-tab:hover {
+            min-height: 68px;
+            color: #101722;
+            filter: brightness(1.06);
+        }
+
+        .folder-tab[aria-current="page"] {
+            min-height: 80px;
+            font-weight: 700;
+        }
+
+        a:focus-visible, button:focus-visible {
+            outline: 3px solid #162b4d;
+            outline-offset: 4px;
+        }
+
+        .folder-tab:focus-visible { outline-offset: -7px; }
+
+        main { padding: 42px clamp(22px, 4vw, 48px) 60px; }
+
+        .travel-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+            gap: 26px;
+            align-items: start;
+        }
+
+        .map-card {
+            min-width: 0;
+            background: white;
+            border: 1px solid #d6e2ce;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 28px #3b563710;
+        }
+
+        #tur-map {
+            width: 100%;
+            height: 570px;
+            background: #fff;
+        }
+
+        .map-caption {
+            margin: 0;
+            padding: 12px 16px;
+            border-top: 1px solid #e4ebdf;
+            color: #53674d;
+            font-size: 12px;
+        }
+
+        .ribbon {
+            display: inline-block;
+            margin: 0 0 20px;
+            padding: 9px 30px 9px 16px;
+            background: #cce0c6;
+            color: #365835;
+            clip-path: polygon(
+                0 0, calc(100% - 18px) 0,
+                100% 50%, calc(100% - 18px) 100%, 0 100%
+            );
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .notes {
+            padding: 20px;
+            border: 1px solid #d6e2ce;
+            border-radius: 12px;
+            background: #ffffffa6;
+            overflow-wrap: anywhere;
+        }
+
+        .notes p { margin: 0 0 20px; }
+        .notes p:last-child { margin-bottom: 0; }
+
+        .map-popup {
+            position: relative;
+            width: min(260px, 75vw);
+            padding: 22px 18px 18px;
+            border-radius: 12px;
+            background: white;
+            border: 1px solid #d6e2ce;
+            box-shadow: 0 8px 30px #0003;
+        }
+
+        .map-popup h2 {
+            margin: 0 0 8px;
+            font-size: 19px;
+            color: #365835;
+        }
+
+        .map-popup p { margin: 0 0 12px; font-size: 13px; }
+
+        .place-photo {
+            display: block;
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 7px;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 3px;
+            right: 8px;
+            border: 0;
+            background: transparent;
+            font-size: 25px;
+            color: #4a5846;
+            cursor: pointer;
+        }
+
+        .contact {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 260px;
+            align-items: center;
+            gap: 32px;
+            padding: 34px clamp(22px, 4vw, 56px);
+            background: #efefef;
+            border-top: 1px solid #dedede;
+        }
+
+        .contact-links { display: grid; gap: 18px; }
+
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: fit-content;
+            color: #344052;
+            text-decoration: none;
+        }
+
+        .contact-link:hover { text-decoration: underline; }
+
+        .contact-link img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+        }
+
+        .contact h2 {
+            margin: 0 0 14px;
+            font-size: 19px;
+            font-weight: 500;
+        }
+
+        .contact-card {
+            padding: 18px;
+            background: #ececec;
+            border: 1px solid #d6d6d6;
+            border-radius: 12px;
+        }
+
+        .contact-card img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .travel-layout { grid-template-columns: 1fr; }
+            #tur-map { height: 490px; }
+        }
+
+        @media (max-width: 680px) {
+            .folder-navigation { padding: 20px 8px 0; }
+            .folder-navigation ul { gap: 3px; }
+            .folder-tab {
+                min-height: 64px;
+                padding: 10px 8px;
+                font-size: 11px;
+                clip-path: polygon(
+                    7px 0, calc(100% - 7px) 0, 100% 100%, 0 100%
+                );
+            }
+            .folder-tab:hover { min-height: 70px; }
+            .folder-tab[aria-current="page"] { min-height: 80px; }
+            #tur-map { height: 420px; }
+            .contact { grid-template-columns: 1fr; }
+            .contact-card { max-width: 260px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; }
+        }
+    
+    .folder-navigation {
+    --tab-slope: clamp(20px, 5vw, 64px);
+    padding: 0;
+    background: #383838;
+}
+
+.folder-navigation ul {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    height: 110px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    isolation: isolate;
+}
+
+.folder-navigation li {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    z-index: 1;
+}
+
+/* Hovered tab comes forward. */
+.folder-navigation li:hover,
+.folder-navigation li:focus-within {
+    z-index: 5;
+}
+
+/* Active tab stays in front. */
+.folder-navigation li:has([aria-current="page"]) {
+    z-index: 10;
+}
+
+.folder-navigation .folder-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: calc(100% + var(--tab-slope) * 2);
+    height: 70px;
+    min-height: 0;
+    margin-left: calc(-1 * var(--tab-slope));
+    padding: 12px calc(var(--tab-slope) + 8px);
+
+    background: var(--tab-color);
+    color: #26303d;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: center;
+    text-decoration: none;
+
+    clip-path: polygon(
+        var(--tab-slope) 0,
+        calc(100% - var(--tab-slope)) 0,
+        100% 100%,
+        0 100%
+    );
+
+    transition: height 200ms ease;
+}
+
+/* Keep the first and last tabs inside the page. */
+.folder-navigation li:first-child .folder-tab {
+    width: calc(100% + var(--tab-slope));
+    margin-left: 0;
+    padding-left: calc(var(--tab-slope) + 8px);
+    padding-right: 8px;
+}
+
+.folder-navigation li:last-child .folder-tab {
+    width: calc(100% + var(--tab-slope));
+    padding-left: 8px;
+    padding-right: calc(var(--tab-slope) + 8px);
+}
+
+/* Middle height when hovered or focused. */
+.folder-navigation .folder-tab:hover,
+.folder-navigation .folder-tab:focus-visible {
+    height: 85px;
+    min-height: 0;
+    filter: none;
+}
+
+/* Highest position for the current page. */
+.folder-navigation .folder-tab[aria-current="page"] {
+    height: 100px;
+    min-height: 0;
+    font-weight: 500;
+}
+
+@media (max-width: 680px) {
+    .folder-navigation ul {
+        height: 95px;
+    }
+
+    .folder-navigation .folder-tab {
+        height: 58px;
+        font-size: 11px;
+    }
+
+    .folder-navigation .folder-tab:hover,
+    .folder-navigation .folder-tab:focus-visible {
+        height: 72px;
+    }
+
+    .folder-navigation .folder-tab[aria-current="page"] {
+        height: 86px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .folder-navigation .folder-tab {
+        transition: none;
+    }
+}
+
+.folder-navigation .folder-tab,
+.folder-navigation li:first-child .folder-tab,
+.folder-navigation li:last-child .folder-tab {
+    padding: 12px var(--tab-slope);
+    justify-content: center;
+    text-align: center;
+    font-size: 17px;
+}
+
+.folder-navigation .folder-tab[aria-current="page"] {
+    font-weight: 700;
+}
+
+@media (max-width: 680px) {
+    .folder-navigation .folder-tab {
+        font-size: 13px;
+    }
+}
+
+
+.travel-layout {
+    display: flow-root;
+}
+
+.travel-layout > .map-card {
+    float: left;
+    width: calc((100% - 26px) * 2 / 3);
+    margin: 0 26px 20px 0;
+}
+
+.travel-layout > section:not(.map-card) {
+    display: block;
+}
+
+.travel-layout .description-card {
+    display: block;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+@media (max-width: 900px) {
+    .travel-layout > .map-card {
+        float: none;
+        width: 100%;
+        margin: 0 0 24px;
+    }
+}
+    </style>
+</head>
+
+<body>
+    <div class="site">
+        <nav class="folder-navigation" aria-label="Main navigation">
+            <ul>
+                <li>
+                    <a class="folder-tab tab-home" href="home.html">Home</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-about" href="me.html">About Me</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-domestic"
+                       href="tur.html" aria-current="page">My Domestic Trips</a>
+                </li>
+                <li>
+                    <a class="folder-tab tab-abroad"
+                       href="wrld.html">My Abroad Trips</a>
+                </li>
+            </ul>
+        </nav>
+
+        <main>
+            <div class="travel-layout">
+                <section class="map-card" aria-label="Türkiye travel map">
+                    <div id="tur-map"
+                         role="region"
+                         aria-label="Map of places visited in Türkiye"
+                         tabindex="0"></div>
+
+                    </p>
+                </section>
+
+                <section aria-labelledby="travel-heading">
+                    <h1 class="ribbon" id="travel-heading">
+                        Cities I Visited in Türkiye
+                    </h1>
+
+                    <div class="notes">
+                        <p><strong>Ankara:</strong> Ankara is where I live and study, so it has an important place in my everyday life. In my free time, I enjoy exploring different parts of the city and spending time with my friends.</p>
+
+<p><strong>İstanbul:</strong> My friends and I travelled to Istanbul to visit a friend and spend time together. The city's lively atmosphere made it a memorable setting for our trip, while being together made the experience even more enjoyable.</p>
+
+<p><strong>Samsun:</strong> During my childhood, I visited Samsun with my family on sightseeing and cultural trips. These visits gave me the chance to discover new places and remain part of my early memories of travelling with my family.</p>
+
+<p><strong>Ayvalık:</strong> I visit my grandparents in Ayvalık every summer, making it a place I feel closely connected to.</p>
+
+<p><strong>Sındırgı:</strong> I completed my first internship at a mine in Sındırgı, Balıkesir. It gave me the opportunity to apply what I had learned at university and gain practical experience, making it an important step in my professional development.</p>
+
+<p><strong>Antalya:</strong> With its Mediterranean coastline, historical surroundings and natural beauty, Antalya offers a variety of places to explore. It brings together the relaxed atmosphere of a coastal city and opportunities for cultural sightseeing.</p>
+
+<p><strong>Mersin:</strong> I spent a summer holiday with my friends in Mersin. Taking a break from our everyday routines and spending time together made this trip a memorable part of my summer.</p>
+
+<p><strong>İzmir:</strong> I have visited İzmir several times and enjoyed its vibrant atmosphere and beautiful coastline. Its connection to the sea gives the city a distinctive character and makes it a pleasant place to explore.</p>
+
+<p><strong>Bodrum:</strong> My aunt and her family live in Bodrum and I used to visit them every year when I was little.</p>
+
+<p><strong>Göynük:</strong> Göynük is my mother's hometown, and I have visited it a few times.</p>
+
+<p><strong>Bursa:</strong> My friends and I stopped in Bursa during our journey to Istanbul, it was more of a culinary tour..</p>
+
+<p><strong>Çanakkale:</strong> During my childhood, when I was involved in sports, I attended camps in Çanakkale more than once. These visits were part of an active period of my life, and I associate the city with my childhood sports experiences.</p>
+
+<p><strong>Çorum:</strong> I visited Çorum on a school trip focused on history and ancient civilisations. Exploring the region with my classmates gave me the opportunity to learn beyond the classroom and made it a memorable educational trip.</p>
+                    </div>
+                </section>
+            </div>
+
+            <div id="tur-popup" class="map-popup" hidden>
+                <button id="tur-popup-close"
+                        class="popup-close"
+                        type="button"
+                        aria-label="Close popup">×</button>
+                <div id="tur-popup-content"></div>
+            </div>
+        </main>
+
+        <footer class="contact">
+            <div class="contact-links">
+                <a class="contact-link" href="mailto:tankosedag5@gmail.com">
+                    <img src="gm.png" alt="">
+                    <span>Email</span>
+                </a>
+                <a class="contact-link" href="https://tr.linkedin.com/in/tan-kösedağ-91223239b"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <img src="lin.png" alt="">
+                    <span>LinkedIn · Tan Kösedağ</span>
+                </a>
+            </div>
+
+            <div class="contact-card">
+                <h2>Contact Me</h2>
+                <img src="hi.jpg" alt="Hi, my name is Tan" loading="lazy">
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const turkeyPlaces = [
+            {
+                name: "Ankara",
+                longitude: 32.8597,
+                latitude: 39.9334,
+                description:
+                    "I live in Ankara and enjoy exploring different parts " +
+                    "of the city in my free time.",
+                image: "ank.jpg"
+            },
+            {
+                name: "İstanbul",
+                longitude: 29.0250,
+                latitude: 40.9900,
+                description:
+                    "My friends and I visited a friend in Istanbul " +
+                    "and spent time together.",
+                image: "ist.jpg"
+            },
+            {
+                name: "Samsun",
+                longitude: 36.3361,
+                latitude: 41.2867,
+                description: "During my childhood, I went on sightseeing and cultural trips with my family.",
+                image: "samsun.jpg"
+            },
+            {
+                name: "Ayvalık",
+                longitude: 26.695278,
+                latitude: 39.320833,
+                description: "I visit my grandparents every summer.",
+                image: "ayv.jpg"
+            },
+            {
+                name: "Sındırgı",
+                longitude: 28.1750,
+                latitude: 39.2400,
+                description:
+                    "I completed my first internship at a mine in Sındırgı.",
+                image: "sin.jpg"
+            },
+            {
+                name: "Antalya",
+                longitude: 30.7133,
+                latitude: 36.8969,
+            
+                image: "antalya.jpg"
+            },
+            {
+                name: "Mersin",
+                longitude: 33.6790,
+                latitude: 36.1550,
+                description:
+                    "I spent the summer holiday with my friends in Mersin.",
+                image: "mrs.jpg"
+            },
+            {
+                name: "İzmir",
+                longitude: 27.1428,
+                latitude: 38.4237,
+                description: "I have visited İzmir several times and enjoyed its vibrant culture and beautiful coastline.",
+                image: "izmir.jpg"
+            },
+            {
+                name: "Bodrum",
+                longitude: 27.4305,
+                latitude: 37.0344,
+                description: "My aunt's family lives there; I used to go every year when I was little.",
+                image: "bodrum.jpg"
+            },
+            {
+                name: "Göynük",
+                longitude: 30.7880,
+                latitude: 40.4000,
+                description: "My mother is from here; I had visited a few times.",
+                image: "goynuk.jpg"
+            },
+            {
+                name: "Bursa",
+                longitude: 29.0601,
+                latitude: 40.1885,
+                description: "We stopped by with my friends during the journey to Istanbul.",
+                image: "bursa.jpg"
+            },
+            {
+                name: "Çanakkale",
+                longitude: 26.4086,
+                latitude: 40.1467,
+                description: "I went to a camp here more than once when I was involved in sports during my childhood.",
+                image: "canakkale.jpg"
+            },
+            {
+                name: "Çorum",
+                longitude: 34.9537,
+                latitude: 40.5506,
+                description: "I went on a trip about Mesopotamia with my school.",
+                image: "corum.jpg"
+            }
+        ];
+
+        const statusElement = document.getElementById("map-status");
+
+        const pinSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="32" height="42" viewBox="0 0 32 42">
+                <path
+                    d="M16 1C7.7 1 1 7.7 1 16c0 11 15 25 15 25s15-14 15-25C31 7.7 24.3 1 16 1z"
+                    fill="#365835" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="5" fill="white"/>
+            </svg>
+        `;
+
+        const pinUrl =
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(pinSvg);
+
+        const markerFeatures = turkeyPlaces.map(function (place) {
+            return new ol.Feature({
+                geometry: new ol.geom.Point(
+                    ol.proj.fromLonLat([place.longitude, place.latitude])
+                ),
+                place: place
+            });
+        });
+
+        const markerLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: markerFeatures,
+                wrapX: false
+            }),
+            declutter: true,
+            style: function (feature) {
+                return new ol.style.Style({
+                    image: new ol.style.Icon({
+                        src: pinUrl,
+                        anchor: [0.5, 1],
+                        declutterMode: "none"
+                    }),
+                    text: new ol.style.Text({
+                        text: feature.get("place").name,
+                        offsetY: 12,
+                        font: "bold 12px Arial",
+                        fill: new ol.style.Fill({ color: "#243044" }),
+                        stroke: new ol.style.Stroke({
+                            color: "white",
+                            width: 4
+                        })
+                    })
+                });
+            }
+        });
+
+        const boundaryLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({ wrapX: false }),
+            style: new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: "#73846c",
+                    width: 1.5
+                })
+            })
+        });
+
+        const baseLayer = new ol.layer.Tile({
+            className: "turkey-basemap",
+            source: new ol.source.OSM({ wrapX: false }),
+            visible: false
+        });
+
+        const view = new ol.View({
+            center: ol.proj.fromLonLat([35, 39]),
+            zoom: 6,
+            minZoom: 5,
+            maxZoom: 18,
+            extent: ol.proj.transformExtent(
+                [25, 35, 45.5, 43],
+                "EPSG:4326",
+                "EPSG:3857"
+            ),
+            constrainOnlyCenter: true,
+            multiWorld: false,
+            enableRotation: false
+        });
+
+        const map = new ol.Map({
+            target: "tur-map",
+            layers: [baseLayer, boundaryLayer, markerLayer],
+            view: view
+        });
+
+        const popupElement = document.getElementById("tur-popup");
+        const popupContent = document.getElementById("tur-popup-content");
+
+        const popup = new ol.Overlay({
+            element: popupElement,
+            positioning: "bottom-center",
+            offset: [0, -44],
+            autoPan: {
+                animation: { duration: 250 },
+                margin: 20
+            }
+        });
+
+        map.addOverlay(popup);
+
+        function closePopup() {
+            popup.setPosition(undefined);
+            popupElement.hidden = true;
+        }
+
+        document.getElementById("tur-popup-close")
+            .addEventListener("click", closePopup);
+
+        function createPopupContent(place) {
+            const container = document.createElement("div");
+
+            const title = document.createElement("h2");
+            title.textContent = place.name;
+
+            const description = document.createElement("p");
+            description.textContent = place.description;
+
+            const image = document.createElement("img");
+            image.src = place.image;
+            image.alt = place.name;
+            image.className = "place-photo";
+
+            image.addEventListener("error", function () {
+                const note = document.createElement("p");
+                note.textContent = "Add your photograph here.";
+                image.replaceWith(note);
+            }, { once: true });
+
+            container.append(title, description, image);
+            return container;
+        }
+
+        map.on("singleclick", function (event) {
+            const feature = map.forEachFeatureAtPixel(
+                event.pixel,
+                function (feature) { return feature; },
+                {
+                    layerFilter: function (layer) {
+                        return layer === markerLayer;
+                    },
+                    hitTolerance: 8
+                }
+            );
+
+            if (!feature) {
+                closePopup();
+                return;
+            }
+
+            popupContent.replaceChildren(
+                createPopupContent(feature.get("place"))
+            );
+
+            popupElement.hidden = false;
+            popup.setPosition(feature.getGeometry().getCoordinates());
+        });
+
+        map.on("pointermove", function (event) {
+            if (event.dragging) return;
+
+            const overMarker = map.hasFeatureAtPixel(event.pixel, {
+                layerFilter: function (layer) {
+                    return layer === markerLayer;
+                },
+                hitTolerance: 8
+            });
+
+            map.getTargetElement().style.cursor =
+                overMarker ? "pointer" : "";
+        });
+
+        let turkeyGeometry;
+
+        baseLayer.on("prerender", function (event) {
+            const context = event.context;
+            context.save();
+
+            if (!turkeyGeometry) return;
+
+            context.beginPath();
+
+            const polygons =
+                turkeyGeometry.getType() === "Polygon"
+                    ? [turkeyGeometry.getCoordinates()]
+                    : turkeyGeometry.getCoordinates();
+
+            polygons.forEach(function (polygon) {
+                polygon.forEach(function (ring) {
+                    ring.forEach(function (coordinate, index) {
+                        const mapPixel =
+                            map.getPixelFromCoordinate(coordinate);
+
+                        const renderPixel =
+                            ol.render.getRenderPixel(event, mapPixel);
+
+                        if (index === 0) {
+                            context.moveTo(renderPixel[0], renderPixel[1]);
+                        } else {
+                            context.lineTo(renderPixel[0], renderPixel[1]);
+                        }
+                    });
+
+                    context.closePath();
+                });
+            });
+
+            context.clip("evenodd");
+        });
+
+        baseLayer.on("postrender", function (event) {
+            event.context.restore();
+        });
+
+        async function loadTurkeyBoundary() {
+            try {
+                const response = await fetch(
+                    "https://raw.githubusercontent.com/nvkelso/" +
+                    "natural-earth-vector/master/geojson/" +
+                    "ne_50m_admin_0_countries.geojson"
+                );
+
+                if (!response.ok) {
+                    throw new Error("Boundary download failed.");
+                }
+
+                const data = await response.json();
+
+                const turkey = data.features.find(function (feature) {
+                    return feature.properties.ADM0_A3 === "TUR";
+                });
+
+                if (!turkey) {
+                    throw new Error("Türkiye boundary was not found.");
+                }
+
+                const boundaryFeature =
+                    new ol.format.GeoJSON().readFeature(turkey, {
+                        dataProjection: "EPSG:4326",
+                        featureProjection: "EPSG:3857"
+                    });
+
+                turkeyGeometry = boundaryFeature.getGeometry();
+                boundaryLayer.getSource().addFeature(boundaryFeature);
+                baseLayer.setVisible(true);
+
+                view.fit(turkeyGeometry.getExtent(), {
+                    padding: [35, 25, 40, 25]
+                });
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        const mapResizeObserver = new ResizeObserver(function () {
+            map.updateSize();
+        });
+
+        mapResizeObserver.observe(document.getElementById("tur-map"));
+
+        loadTurkeyBoundary();
+    </script>
+</body>
+</html>
